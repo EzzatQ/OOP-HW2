@@ -6,9 +6,7 @@ import OOP2.Provided.SamePersonException;
 import OOP2.Provided.Status;
 
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.util.LinkedList;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -16,8 +14,8 @@ public class PersonImpl implements Person {
 
 	private final Integer id;
 	private final String name;
-	private List<StatusImpl> statuses;
-	private List<Person> friends;
+	private LinkedList<Status> statuses;
+	private LinkedList<Person> friends;
 	private Integer lastStatusId;
 	/**
 	 * Constructor receiving person's id and name.
@@ -25,8 +23,8 @@ public class PersonImpl implements Person {
 	public PersonImpl(Integer id, String name) {
 		this.id = id;
 		this.name = name;
-		this.statuses = Collections.emptyList();
-		this.friends = Collections.emptyList();
+		this.statuses = new LinkedList<Status>();
+		this.friends = new LinkedList<Person>();
 		this.lastStatusId = 0;
 	}
 
@@ -57,7 +55,6 @@ public class PersonImpl implements Person {
 			throw new ConnectionAlreadyExistException();
 		}
 		friends.add(p);
-		p.addFriend(this);
 	}
 
 	@Override
@@ -67,12 +64,12 @@ public class PersonImpl implements Person {
 
 	@Override
 	public Iterable<Status> getStatusesRecent() {
-		return statuses.stream().sorted(new RecentStatusComparator()).collect(Collectors.toList());
+		return statuses.stream().sorted((p1, p2) -> -p1.getId().compareTo(p2.getId())).collect(Collectors.toList());
 	}
 
 	@Override
 	public Iterable<Status> getStatusesPopular() {
-		return statuses.stream().sorted(new PopularStatusComparator()).collect(Collectors.toList());
+		return statuses.stream().sorted((p1, p2) -> -p1.getLikesCount().compareTo(p2.getLikesCount())).collect(Collectors.toList());
 	}
 
 	@Override
@@ -96,19 +93,4 @@ public class PersonImpl implements Person {
 	public int hashCode() {
 		return Objects.hash(id);
 	}
-
-	static class RecentStatusComparator implements Comparator<StatusImpl> {
-		@Override
-		public int compare(StatusImpl o1, StatusImpl o2) {
-			return -o1.getId().compareTo(o2.getId());
-		}
-	}
-
-	static class PopularStatusComparator implements Comparator<StatusImpl> {
-		@Override
-		public int compare(StatusImpl o1, StatusImpl o2) {
-			return -o1.getLikesCount().compareTo(o2.getLikesCount());
-		}
-	}
-
 }
