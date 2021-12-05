@@ -10,10 +10,12 @@ import OOP2.Provided.PersonNotInSystemException;
 import OOP2.Provided.SamePersonException;
 import OOP2.Provided.StatusIterator;
 
+import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 import java.util.stream.Collectors;
 
 public class FaceOOPImpl implements FaceOOP {
@@ -73,19 +75,47 @@ public class FaceOOPImpl implements FaceOOP {
 	@Override
 	public StatusIterator getFeedByRecent(Person p) throws PersonNotInSystemException {
 		getUser(p.getId());
-		return new StatusIteratorImpl(p.getStatusesRecent());
+		return new StatusIteratorImpl(p, SortType.RECENT);
 	}
 
 	@Override
 	public StatusIterator getFeedByPopular(Person p) throws PersonNotInSystemException {
 		getUser(p.getId());
-		return new StatusIteratorImpl(p.getStatusesPopular());
+		return new StatusIteratorImpl(p, SortType.POPULAR);
 	}
 
 	@Override
 	public Integer rank(Person source, Person target)
 		throws PersonNotInSystemException, ConnectionDoesNotExistException {
-		return null;
+		getUser(source.getId());
+		getUser(target.getId());
+		Integer maxId = users.stream().map(Person::getId).max(Integer::compareTo).orElse(-1);
+		int[] discovered = new int[maxId+1];
+		for (int i = 1; i < maxId + 1; i++) {
+			discovered[i] = -1;
+		}
+		Queue<Person> q = new ArrayDeque<>();
+		q.add(source);
+		discovered[source.getId()] = 0;
+		int res = rank_aux(target, q, discovered);
+		if(res == -1){
+			throw new ConnectionDoesNotExistException();
+		}
+		return res;
+	}
+
+	private Integer rank_aux(Person target, Queue<Person> q, int[] discovered) {
+		if(q.isEmpty()) return -1;
+		Person v = q.remove();
+		if(v.equals(target)) return discovered[v.getId()];
+		for(Person friend: v.getFriends()){
+			if(discovered[friend.getId()] == -1) {
+				discovered[friend.getId()] = discovered[v.getId()] + 1;
+				q.add(friend);
+			}
+		}
+		return rank_aux(target, q, discovered);
+
 	}
 
 	@Override
@@ -99,6 +129,10 @@ public class FaceOOPImpl implements FaceOOP {
 		return p3 != null || p4 != null;
 	}
 
+	public enum SortType {
+		RECENT,
+		POPULAR
+	}
 }
 
 class StatusIteratorImpl implements StatusIterator {
@@ -107,6 +141,19 @@ class StatusIteratorImpl implements StatusIterator {
 
 	StatusIteratorImpl(Iterable<Status> statuses){
 		itr = statuses.iterator();
+	}
+
+	StatusIteratorImpl(Person user, FaceOOPImpl.SortType sortType){
+		LinkedList<Status> sortedStatuses = new LinkedList<Status>();
+		switch(sortType){
+			case RECENT: {
+
+				user.getFriends().stream().sorted((p1, p2) -> p1.getId().compareTo(p2.getId())).map(Person::getStatusesRecent).forEach(s -> s.forEach(sortedStatuses::add));
+			} case POPULAR: {
+				user.getFriends().stream().sorted((p1, p2) -> p1.getId().compareTo(p2.getId())).map(Person::getStatusesPopular).forEach(s -> s.forEach(sortedStatuses::add));
+			}
+		}
+		itr = sortedStatuses.iterator();
 	}
 
 	@Override
