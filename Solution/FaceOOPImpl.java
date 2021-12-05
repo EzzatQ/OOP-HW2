@@ -73,13 +73,13 @@ public class FaceOOPImpl implements FaceOOP {
 	@Override
 	public StatusIterator getFeedByRecent(Person p) throws PersonNotInSystemException {
 		getUser(p.getId());
-		return (StatusIterator) p.getStatusesRecent().iterator();
+		return new StatusIteratorImpl(p.getStatusesRecent());
 	}
 
 	@Override
 	public StatusIterator getFeedByPopular(Person p) throws PersonNotInSystemException {
 		getUser(p.getId());
-		return (StatusIterator) p.getStatusesPopular().iterator();
+		return new StatusIteratorImpl(p.getStatusesPopular());
 	}
 
 	@Override
@@ -99,35 +99,23 @@ public class FaceOOPImpl implements FaceOOP {
 		return p3 != null || p4 != null;
 	}
 
-	public enum SortType {
-		RECENT,
-		POPULAR
-	}
-
 }
 
 class StatusIteratorImpl implements StatusIterator {
 
-	private static List<Status> sortedStatuses;
+	private static Iterator<Status> itr;
 
-	StatusIteratorImpl(List<Person> users, FaceOOPImpl.SortType sortType){
-		sortedStatuses = Collections.emptyList();
-		switch(sortType){
-			case RECENT: {
-				users.stream().sorted((p1, p2) -> p1.getId().compareTo(p2.getId())).map(Person::getStatusesRecent).forEach(s -> s.forEach(s1 -> sortedStatuses.add(s1)));
-			} case POPULAR: {
-				users.stream().sorted((p1, p2) -> p1.getId().compareTo(p2.getId())).map(Person::getStatusesPopular).forEach(s -> s.forEach(s1 -> sortedStatuses.add(s1)));
-			}
-		}
+	StatusIteratorImpl(Iterable<Status> statuses){
+		itr = statuses.iterator();
 	}
 
 	@Override
 	public boolean hasNext() {
-		return false;
+		return itr.hasNext();
 	}
 
 	@Override
 	public Status next() {
-		return null;
+		return itr.next();
 	}
 }
